@@ -1,0 +1,57 @@
+pipeline{
+    agent{
+        label 'buildNode'
+    }
+tools{
+    maven 'maven3.9.1'
+}
+stages{
+    stage('1Clone'){
+        steps{
+            sh "echo 'cloning the latest applicaton version' "
+            git "https://github.com/MikeTecK/maven-web-application.git"
+            sh "echo 'latest application version available for testing and build' "
+        }
+    }
+    stage('2TestBuild'){
+        steps{
+            sh "echo 'running JUnit-test-cases' "
+            sh "echo 'testing must passed to create artifacts'"
+            sh "mvn clean package"
+        }
+    }
+    stage('3CodeQualityAnalysis'){
+        steps{
+        sh "echo setup sonarQube authentication"
+        sh "echo 'Performing CodeQualityAnalysis'"
+        sh "mvn sonar:sonar"
+    }
+}
+stage('4UploadArtifacts'){
+    steps{
+        sh "echo onfigure nexus authentication"
+        sh "mvn deploy"
+        }
+}
+stage('5deploy'){
+    steps{
+        deploy adapters: [tomcat9(credentialsId: 'TomcatDomiCredentials', path: '', url: 'http://54.237.65.16:8080/')], contextPath: null, war: 'target/*war'
+    }
+}
+}
+post{
+    always{
+        emailext body: '''Great Job Team
+Mike''', recipientProviders: [developers(), contributor()], subject: 'Build Success', to: 'dekyekwame@gmail.com'
+    }
+    success{
+        emailext body: '''Great Job Team
+Mike''', recipientProviders: [developers(), contributor()], subject: 'Build Success', to: 'dekyekwame@gmail.com'
+    }
+    failure{
+        emailext body: '''Please review this Job
+
+Mike''', recipientProviders: [developers(), contributor()], subject: 'Build failure', to: 'dekyekwame@gmail.com'
+    }
+}
+}
